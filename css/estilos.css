@@ -1,0 +1,81 @@
+:root {
+  color-scheme: dark;
+  font-family: Arial, Helvetica, sans-serif;
+  --texto: #f2f5f3;
+  --suave: #b8c8cd;
+  --menta: #b2edca;
+  --panel: rgba(15, 33, 43, .94);
+  --borde: rgba(217, 237, 229, .2);
+}
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; background: #122530; color: var(--texto); }
+[hidden] { display: none !important; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: wait; opacity: .6; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--menta); outline-offset: 4px; }
+#escena { position: fixed; inset: 0; }
+#escena canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+.panel, .tarjeta-modal {
+  width: 360px;
+  max-width: 100%;
+  padding: 28px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.inicio { position: fixed; z-index: 2; left: 6%; top: 50%; transform: translateY(-50%); }
+h1, h2 { margin: 0 0 18px; font-size: 30px; line-height: 1.15; }
+.panel > p, .tarjeta-modal > p { margin: 0 0 22px; color: var(--suave); font-size: 14px; line-height: 1.6; }
+.atajos-inicio { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; font-size: 12px; color: var(--suave); }
+kbd { display: inline-block; padding: 3px 6px; border: 1px solid var(--borde); border-radius: 4px; font: inherit; font-size: 11px; color: var(--texto); white-space: nowrap; }
+.boton { display: block; padding: 12px 18px; border: 1px solid var(--borde); border-radius: 6px; font-size: 14px; text-align: center; text-decoration: none; }
+.principal { width: 100%; border-color: transparent; background: var(--menta); color: #152d2b; font-weight: 600; }
+.principal:hover { background: #cdf9dd; }
+.secundario { width: 100%; background: #25404c; }
+.secundario:hover, .compacto:hover { background: #34535f; }
+.enlace-boton { display: block; margin: 14px auto 0; padding: 6px; border: 0; background: none; color: var(--suave); font-size: 13px; }
+.enlace-boton:hover { color: var(--texto); }
+
+.hud { position: fixed; inset: 0; pointer-events: none; }
+.hud button { pointer-events: auto; }
+.estado-partida { position: absolute; top: 20px; left: 20px; padding: 12px 16px; border: 1px solid var(--borde); border-radius: 8px; background: var(--panel); }
+.altura { margin: 0; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.altura small { font-size: 14px; font-weight: 400; color: var(--suave); }
+#checkpoint-texto { margin: 6px 0 0; color: var(--suave); font-size: 12px; }
+.acciones-partida { position: absolute; top: 20px; right: 20px; display: flex; gap: 8px; }
+.compacto { min-width: 40px; min-height: 40px; padding: 10px 12px; background: var(--panel); font-size: 13px; }
+
+.aviso { position: fixed; z-index: 5; left: 50%; top: 112px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 10px 16px; border: 1px solid var(--borde); border-radius: 6px; background: var(--panel); font-size: 13px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.aviso.visible { opacity: 1; }
+.pantalla-modal { position: fixed; z-index: 6; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: auto; background: rgba(8, 24, 32, .68); }
+.tarjeta-modal { max-height: calc(100dvh - 40px); overflow-y: auto; }
+.tarjeta-modal .boton + .boton { margin-top: 12px; }
+.ayuda { width: 440px; }
+.ayuda dl { margin: 0 0 20px; }
+.ayuda dl div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--borde); font-size: 12px; }
+.ayuda dt { flex-shrink: 0; }
+.ayuda dd { margin: 0; color: var(--suave); text-align: right; }
+.resultado { display: flex; justify-content: space-between; gap: 12px; margin: 24px 0; }
+.resultado > div { display: flex; flex-direction: column; gap: 8px; }
+.resultado span { color: var(--suave); font-size: 11px; }
+.resultado b { font-size: 20px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.inspeccion-aviso { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 12px 16px; border: 1px solid var(--borde); border-radius: 6px; background: var(--panel); font-size: 12px; line-height: 1.6; text-align: center; }
+.lil-gui.root { --background-color: #152c37; --widget-color: #2a4653; --focus-color: #365d6a; --text-color: #e9f1e9; --number-color: #b2edca; --string-color: #b2edca; position: fixed; z-index: 8; top: 110px; right: 20px; }
+
+@media (max-width: 600px) {
+  .inicio { left: 20px; right: 20px; top: auto; bottom: 24px; width: auto; transform: none; }
+  .panel, .tarjeta-modal { padding: 22px; }
+  h1, h2 { font-size: 27px; }
+  .estado-partida { left: 12px; top: 12px; padding: 10px 12px; }
+  .acciones-partida { right: 12px; top: 12px; gap: 6px; }
+  .compacto { padding: 10px; }
+  .lil-gui.root { right: 12px; }
+}
+@media (max-height: 440px) {
+  .inicio { top: 16px; bottom: 16px; transform: none; overflow-y: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#122530">
+  <meta name="description" content="Torre Ascendente: un juego de plataformas 3D realizado con Three.js r140 para GPC.">
+  <title>Torre Ascendente · GPC</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%239de4bc' d='M16 2 30 29H2z'/%3E%3Cpath fill='%23122530' d='m16 10 7 15H9z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <div id="escena" aria-label="Escenario tridimensional de Torre Ascendente"></div>
+  <main>
+    <section id="inicio" class="panel inicio" aria-labelledby="titulo-inicio">
+      <h1 id="titulo-inicio">Torre Ascendente</h1>
+      <p>Salta de plataforma en plataforma hasta llegar a la cima.</p>
+      <div class="atajos-inicio"><span><kbd>WASD</kbd> mover</span><span><kbd>Espacio</kbd> saltar</span></div>
+      <button id="jugar" class="boton principal" disabled>Cargando…</button>
+      <button id="ayuda-inicio" class="enlace-boton">Controles</button>
+    </section>
+
+    <section id="hud" class="hud" hidden aria-label="Estado de la partida">
+      <div class="estado-partida">
+        <p class="altura"><span id="altura">0</span><small> / 72 m</small></p>
+        <p id="checkpoint-texto">Control: Base</p>
+      </div>
+      <div class="acciones-partida">
+        <button id="cambiar-camara" class="boton compacto" aria-label="Cambiar a primera persona (F)" aria-pressed="false" title="Cambiar a primera persona (F)">3ª persona</button>
+        <button id="pausar" class="boton compacto" title="Pausar (P)">Pausa</button>
+        <button id="ayuda-juego" class="boton compacto" aria-label="Ver controles" title="Ayuda (H)">?</button>
+      </div>
+    </section>
+
+    <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+    <div id="inspeccion-aviso" class="inspeccion-aviso" hidden>Arrastra para orbitar · Rueda para acercar · <kbd>C</kbd> volver</div>
+
+    <section id="pausa" class="pantalla-modal" hidden aria-labelledby="titulo-pausa" role="dialog" aria-modal="true">
+      <div class="tarjeta-modal"><h2 id="titulo-pausa">Pausa</h2><button id="continuar" class="boton principal">Continuar</button><button id="ayuda-pausa" class="boton secundario">Controles</button><button id="reiniciar" class="enlace-boton">Empezar de nuevo</button></div>
+    </section>
+
+    <section id="ayuda" class="pantalla-modal" hidden aria-labelledby="titulo-ayuda" role="dialog" aria-modal="true">
+      <div class="tarjeta-modal ayuda"><h2 id="titulo-ayuda">Controles</h2><p>Sigue las flechas. Al aterrizar en una plataforma con aro recoges su cristal luminoso y guardas un punto de control.</p><dl><div><dt><kbd>WASD</kbd> / flechas</dt><dd>Moverte</dd></div><div><dt><kbd>Espacio</kbd></dt><dd>Saltar</dd></div><div><dt><kbd>F</kbd></dt><dd>Cambiar entre 1ª y 3ª persona</dd></div><div><dt><kbd>Q</kbd> / <kbd>E</kbd> o arrastrar</dt><dd>Girar; arrastra para mirar arriba/abajo</dd></div><div><dt>Rueda del ratón</dt><dd>Acercar o alejar en 3ª persona</dd></div><div><dt><kbd>R</kbd></dt><dd>Volver al punto de control</dd></div><div><dt><kbd>P</kbd> / <kbd>Esc</kbd></dt><dd>Pausa</dd></div><div><dt><kbd>H</kbd></dt><dd>Ayuda</dd></div><div><dt><kbd>C</kbd></dt><dd>Inspeccionar la torre</dd></div><div><dt><kbd>G</kbd></dt><dd>Controles gráficos</dd></div></dl><button id="cerrar-ayuda" class="boton principal">Cerrar</button></div>
+    </section>
+
+    <section id="victoria" class="pantalla-modal" hidden aria-labelledby="titulo-victoria" role="dialog" aria-modal="true">
+      <div class="tarjeta-modal"><h2 id="titulo-victoria">¡Has llegado a la cima!</h2><div class="resultado"><div><span>Tiempo</span><b id="tiempo-final">00:00</b></div><div><span>Caídas</span><b id="caidas-final">0</b></div><div><span>Mejor tiempo</span><b id="record-final">—</b></div></div><button id="otra-partida" class="boton principal">Volver a jugar</button></div>
+    </section>
+
+    <section id="error" class="pantalla-modal" hidden role="alert"><div class="tarjeta-modal"><h2>No se ha podido iniciar</h2><p id="error-texto"></p><a class="boton principal" href="./">Reintentar</a></div></section>
+  </main>
+  <noscript>Activa JavaScript para jugar a Torre Ascendente.</noscript>
+  <script src="lib/three.min_r140.js"></script>
+  <script src="lib/OrbitControls.js"></script>
+  <script src="lib/GLTFLoader.js"></script>
+  <script src="lib/lil-gui_0.16.1.js"></script>
+  <script src="js/configuracion.js"></script>
+  <script src="js/mundo.js"></script>
+  <script src="js/personaje.js"></script>
+  <script src="js/fisica.js"></script>
+  <script src="js/juego.js"></script>
+</body>
+</html>
