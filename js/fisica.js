@@ -5,6 +5,7 @@
 Torre.FisicaJugador = class {
   constructor(plataformas) {
     this.plataformas = plataformas;
+    this.alturaNucleo = plataformas.find(p => p.esCima)?.altura ?? Torre.CONFIG.alturaTotal;
     this.posicion = new THREE.Vector3();
     this.velocidad = new THREE.Vector3();
     this.enSuelo = true;
@@ -28,6 +29,10 @@ Torre.FisicaJugador = class {
   }
   solicitarSalto() { this.bufferSalto = Torre.CONFIG.margenSalto; }
   dentro(p,x,z,margen = 0) {
+    if (p.circular) {
+      const dx = x-p.grupo.position.x, dz = z-p.grupo.position.z;
+      return dx*dx+dz*dz < (p.radioCircular+margen)**2;
+    }
     if (p.radio) {
       const apotema = p.radio*Math.cos(Math.PI/p.lados)+margen;
       for (let i = 0; i < p.lados; i++) {
@@ -38,6 +43,22 @@ Torre.FisicaJugador = class {
     }
     return x > p.caja.min.x-margen && x < p.caja.max.x+margen && z > p.caja.min.z-margen && z < p.caja.max.z+margen;
   }
+  separarCirculo(centroX,centroZ,radio) {
+    // Se conserva la velocidad tangencial y se elimina la que entra en la pared.
+    const dx = this.posicion.x-centroX, dz = this.posicion.z-centroZ;
+    const distancia = Math.hypot(dx,dz);
+    const limite = radio+Torre.CONFIG.radioJugador;
+    if (distancia >= limite) return;
+    const nx = distancia > .0001 ? dx/distancia : 1;
+    const nz = distancia > .0001 ? dz/distancia : 0;
+    this.posicion.x = centroX+nx*limite;
+    this.posicion.z = centroZ+nz*limite;
+    const normal = this.velocidad.x*nx+this.velocidad.z*nz;
+    if (normal < 0) {
+      this.velocidad.x -= normal*nx;
+      this.velocidad.z -= normal*nz;
+    }
+  }
   moverHorizontal(eje,desplazamiento) {
     const c = Torre.CONFIG;
     this.posicion[eje] += desplazamiento;
@@ -47,6 +68,10 @@ Torre.FisicaJugador = class {
       if (p.radio) continue;
       // Solo las caras laterales que se solapan verticalmente con el cuerpo.
       if (this.posicion.y >= p.caja.max.y-.001 || this.posicion.y+c.altoJugador <= p.caja.min.y+.001) continue;
+      if (p.circular) {
+        this.separarCirculo(p.grupo.position.x,p.grupo.position.z,p.radioCircular);
+        continue;
+      }
       if (this.posicion[otro]+c.radioJugador <= p.caja.min[otro] || this.posicion[otro]-c.radioJugador >= p.caja.max[otro]) continue;
       if (this.posicion[eje]+c.radioJugador <= p.caja.min[eje] || this.posicion[eje]-c.radioJugador >= p.caja.max[eje]) continue;
       if (desplazamiento > 0) this.posicion[eje] = p.caja.min[eje]-c.radioJugador;
@@ -54,15 +79,8 @@ Torre.FisicaJugador = class {
       this.velocidad[eje] = 0;
     }
     // Núcleo circular sólido; proyectamos hacia fuera para poder deslizar por él.
-    const distancia = Math.hypot(this.posicion.x,this.posicion.z);
-    const limite = c.radioNucleo+c.radioJugador;
-    if (distancia < limite && this.posicion.y < 74 && this.posicion.y+c.altoJugador > -.5) {
-      const nx = distancia > .0001 ? this.posicion.x/distancia : 1;
-      const nz = distancia > .0001 ? this.posicion.z/distancia : 0;
-      this.posicion.x = nx*limite;
-      this.posicion.z = nz*limite;
-      const normal = this.velocidad.x*nx+this.velocidad.z*nz;
-      if (normal < 0) { this.velocidad.x -= normal*nx; this.velocidad.z -= normal*nz; }
+    if (this.posicion.y < this.alturaNucleo-.001 && this.posicion.y+c.altoJugador > -.5) {
+      this.separarCirculo(0,0,c.radioNucleo);
     }
   }
   paso(delta,direccion) {

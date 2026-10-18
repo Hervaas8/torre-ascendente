@@ -18,13 +18,24 @@ Torre.PERFILES_PLATAFORMAS = [
   [[2.9,2.7],[2.55,3.1],[2.7,2.5],[2.4,2.8]],
   [[2.35,2.15],[2.05,2.5],[2.2,1.95],[1.9,2.05]]
 ];
+Torre.esCircular = function(indice) {
+  const c = Torre.CONFIG;
+  return indice > c.checkpointCada && indice < c.plataformas &&
+    indice%c.checkpointCada !== 0 && indice%3 === 1;
+};
 Torre.dimensionesPlataforma = function(indice) {
   const c = Torre.CONFIG;
   if (indice === c.plataformas) return {ancho:5.4,profundidad:5.4};
   if (indice%c.checkpointCada === 0) return {ancho:4.8,profundidad:4.8};
   const zona = Math.min(2,Math.floor(indice/c.checkpointCada));
   const perfil = Torre.PERFILES_PLATAFORMAS[zona][(indice-1)%Torre.PERFILES_PLATAFORMAS[zona].length];
-  return {ancho:perfil[0]*c.ancho/3.65,profundidad:perfil[1]*c.ancho/3.65};
+  const ancho = perfil[0]*c.ancho/3.65;
+  const profundidad = perfil[1]*c.ancho/3.65;
+  if (Torre.esCircular(indice)) {
+    const diametro = Math.min(ancho,profundidad);
+    return {ancho:diametro,profundidad:diametro};
+  }
+  return {ancho,profundidad};
 };
 Torre.ZONAS = [
   { nombre: 'EL BOSQUE', corto: 'El bosque', cielo: 0x203b47, niebla: 0x37535b, luz: 0xffedc5, ambiente: 0xa4c7c7, acento: 0xb2edca, plataforma: 0xb7b198, torre: 0x839383, textura: 'wood512.jpg', intensidad: .9 },

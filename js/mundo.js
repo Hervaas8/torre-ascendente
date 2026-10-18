@@ -7,7 +7,6 @@ Torre.Mundo = class {
     this.renderer = renderer;
     this.plataformas = [];
     this.balizas = [];
-    this.nubes = [];
     this.materiales = [];
     this.colores = {};
     this.grupo = new THREE.Group();
@@ -29,7 +28,7 @@ Torre.Mundo = class {
     this.crearTorre();
     this.crearPlataformas();
     this.crearAtmosfera();
-    this.superficies = [...this.plataformas,{
+    this.superficies = [...this.plataformas,this.cima,{
       indice:0,grupo:this.grupo,suelo:this.sueloIsla,altura:-.1,
       checkpoint:false,zona:0,radio:14,lados:12
     }];
@@ -45,8 +44,8 @@ Torre.Mundo = class {
       p.caja = new THREE.Box3().setFromObject(p.suelo);
       this.ayudas.add(new THREE.Box3Helper(p.caja,0xb2edca));
     });
-    const nucleo = new THREE.Mesh(new THREE.CylinderGeometry(Torre.CONFIG.radioNucleo,Torre.CONFIG.radioNucleo,75,24),new THREE.MeshBasicMaterial({color:0xffad79,wireframe:true}));
-    nucleo.position.y = 36;
+    const nucleo = new THREE.Mesh(new THREE.CylinderGeometry(Torre.CONFIG.radioNucleo,Torre.CONFIG.radioNucleo,this.cima.altura+.5,24),new THREE.MeshBasicMaterial({color:0xffad79,wireframe:true}));
+    nucleo.position.y = (this.cima.altura-.5)/2;
     this.ayudas.add(nucleo);
   }
   material(tipo,parametros) {
@@ -102,12 +101,6 @@ Torre.Mundo = class {
       this.malla(new THREE.ConeGeometry(.6,alto*.9,6),hojas[(i+1)%3],[0,alto*1.55,0],arbol);
       isla.add(arbol);
     }
-    for (let i = 0; i < 14; i++) {
-      const a = i * 2.4;
-      const r = 10 + Math.sin(i) * 1.2;
-      const piedra = this.malla(new THREE.DodecahedronGeometry(.35 + i%3*.15),roca,[Math.cos(a)*r,.1,Math.sin(a)*r],isla);
-      piedra.scale.y = .7;
-    }
     // Islas lejanas: referencias de escala y profundidad, sin colisiones.
     for (let i = 0; i < 7; i++) {
       const a = i / 7 * Math.PI * 2;
@@ -121,38 +114,49 @@ Torre.Mundo = class {
     }
   }
   crearTorre() {
+    const c = Torre.CONFIG;
     const torre = new THREE.Group();
     torre.name = 'torre';
     this.grupo.add(torre);
-    const oscuro = this.material('MeshLambertMaterial',{color:0x3d5359});
     const borde = this.material('MeshPhongMaterial',{color:0x9bafaa,map:this.texturas['metal_128.jpg'],shininess:45});
+    let materialSuperior;
     for (let zona = 0; zona < 3; zona++) {
       const datos = Torre.ZONAS[zona];
       const segmento = new THREE.Group();
       segmento.name = 'tramo-' + datos.corto;
       torre.add(segmento);
       const material = this.material(zona === 2 ? 'MeshPhongMaterial' : 'MeshLambertMaterial',{color:datos.torre,map:this.texturas[datos.textura]});
+      if (zona === 2) materialSuperior = material;
       this.malla(new THREE.CylinderGeometry(3.05,3.05,24,12),material,[0,zona*24+11.7,0],segmento);
       for (let j = 0; j < 6; j++) {
         const y = zona*24+j*4;
         this.malla(new THREE.CylinderGeometry(3.24,3.24,.24,12),borde,[0,y,0],segmento);
-        for (let ventana = 0; ventana < 6; ventana++) {
-          const a = ventana * Math.PI / 3;
-          const hueco = this.malla(new THREE.BoxGeometry(.32,1.4,.1),oscuro,[Math.cos(a)*3.01,y+2,Math.sin(a)*3.01],segmento);
-          hueco.rotation.y = -a + Math.PI/2;
-        }
       }
       const luz = this.material('MeshBasicMaterial',{color:datos.acento});
       const aro = this.malla(new THREE.TorusGeometry(3.3,.035,6,48),luz,[0,zona*24+.3,0],segmento);
       aro.rotation.x = Math.PI / 2;
     }
-    this.malla(new THREE.CylinderGeometry(3.65,3.65,.65,12),borde,[0,72.2,0],torre);
+    // La cubierta es un suelo real, dos metros por encima del último checkpoint.
+    const alturaCima = (c.plataformas+1)*c.escalon;
+    const baseCuello = c.plataformas*c.escalon-.5;
+    this.malla(new THREE.CylinderGeometry(c.radioNucleo,c.radioNucleo,alturaCima-baseCuello,12),materialSuperior,[0,(alturaCima+baseCuello)/2,0],torre);
+    const cubierta = new THREE.Group();
+    cubierta.name = 'cima';
+    cubierta.position.y = alturaCima;
+    torre.add(cubierta);
+    const sueloCima = this.malla(new THREE.CylinderGeometry(3.65,3.65,.65,48),borde,[0,-.325,0],cubierta);
+    this.cima = {
+      indice:c.plataformas+1,grupo:cubierta,suelo:sueloCima,altura:alturaCima,
+      esCima:true,checkpoint:false,circular:true,radioCircular:3.65,
+      ancho:7.3,profundidad:7.3,zona:2
+    };
     const corona = this.material('MeshPhongMaterial',{color:0xffd897,shininess:100,emissive:0xb77732,emissiveIntensity:.2});
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * Math.PI*2;
-      this.malla(new THREE.BoxGeometry(.45,1.7,.45),corona,[Math.cos(a)*3.1,73.25,Math.sin(a)*3.1],torre);
+      // Por debajo de los ojos para no tapar la llegada en primera persona.
+      this.malla(new THREE.BoxGeometry(.45,1.2,.45),corona,[Math.cos(a)*3.1,.475,Math.sin(a)*3.1],cubierta);
     }
-    const gema = this.malla(new THREE.OctahedronGeometry(1),corona,[0,75.8,0],torre);
+    const gema = this.malla(new THREE.OctahedronGeometry(.65),corona,[0,1.35,0],cubierta);
     this.gemaCima = gema;
     const pedestal = this.material('MeshLambertMaterial',{color:0x566c6c});
     this.malla(new THREE.CylinderGeometry(3.8,4.3,1,12),pedestal,[0,-.1,0],torre);
@@ -215,22 +219,31 @@ Torre.Mundo = class {
       const angulo = i * c.angulo;
       const zona = Math.min(2,Math.floor(i / c.checkpointCada));
       const esCheckpoint = i % c.checkpointCada === 0;
+      const circular = Torre.esCircular(i);
       const {ancho,profundidad} = Torre.dimensionesPlataforma(i);
+      const radioCircular = circular ? ancho/2 : 0;
       const grupo = new THREE.Group();
       grupo.name = 'plataforma-' + String(i).padStart(2,'0');
       grupo.position.set(Math.cos(angulo)*c.radio,i*c.escalon,Math.sin(angulo)*c.radio);
       this.grupo.add(grupo);
-      // Las cajas no giran: el volumen de colisión coincide con la geometría visible.
-      const suelo = this.malla(new THREE.BoxGeometry(ancho,c.grosor,profundidad),acabados[zona],[0,-c.grosor/2,0],grupo);
-      this.malla(new THREE.BoxGeometry(ancho+.07,.12,profundidad+.07),zocalos[zona],[0,-c.grosor+.08,0],grupo);
+      // Los cilindros tienen apoyo y laterales circulares en fisica.js.
+      const geometriaSuelo = circular
+        ? new THREE.CylinderGeometry(radioCircular,radioCircular,c.grosor,48)
+        : new THREE.BoxGeometry(ancho,c.grosor,profundidad);
+      const geometriaBorde = circular
+        ? new THREE.CylinderGeometry(radioCircular+.035,radioCircular+.035,.12,48)
+        : new THREE.BoxGeometry(ancho+.07,.12,profundidad+.07);
+      const suelo = this.malla(geometriaSuelo,acabados[zona],[0,-c.grosor/2,0],grupo);
+      this.malla(geometriaBorde,zocalos[zona],[0,-c.grosor+.08,0],grupo);
       const brazo = this.malla(new THREE.BoxGeometry(c.radio-3,.3,.35),soporte,[-Math.cos(angulo)*2.1,-.85,-Math.sin(angulo)*2.1],grupo);
       brazo.rotation.y = -angulo;
       const numero = this.crearNumero(i,Torre.ZONAS[zona].acento);
       numero.position.set(0,.018,Math.min(.85,profundidad/2-.3));
       grupo.add(numero);
-      if (i < c.plataformas) {
+      {
         const flecha = this.crearFlecha(Torre.ZONAS[zona].acento);
-        const siguiente = new THREE.Vector3(Math.cos(angulo+c.angulo)*c.radio,0,Math.sin(angulo+c.angulo)*c.radio);
+        const siguiente = i === c.plataformas ? new THREE.Vector3() :
+          new THREE.Vector3(Math.cos(angulo+c.angulo)*c.radio,0,Math.sin(angulo+c.angulo)*c.radio);
         flecha.rotation.y = Math.atan2(siguiente.x-grupo.position.x,siguiente.z-grupo.position.z);
         flecha.position.set(0,.025,-.1);
         grupo.add(flecha);
@@ -260,9 +273,9 @@ Torre.Mundo = class {
         aro = this.malla(new THREE.TorusGeometry(ancho*.35,.045,6,40),zocalos[zona],[0,.035,0],grupo);
         aro.rotation.x = Math.PI / 2;
       }
-      this.plataformas.push({indice:i,grupo,suelo,baliza,luzCheckpoint,aro,checkpoint:esCheckpoint,altura:i*c.escalon,zona,ancho,profundidad});
+      this.plataformas.push({indice:i,grupo,suelo,baliza,luzCheckpoint,aro,checkpoint:esCheckpoint,altura:i*c.escalon,zona,ancho,profundidad,circular,radioCircular});
     }
-    // Disco de partida ancho: permite aprender los controles antes del primer salto.
+    // Base de partida ancha: permite aprender los controles antes del primer salto.
     const base = this.malla(new THREE.BoxGeometry(5.8,.5,6),acabados[0],[c.radio,-.25,0]);
     const p0 = this.plataformas[0];
     p0.grupo.remove(p0.suelo);
@@ -274,22 +287,6 @@ Torre.Mundo = class {
   crearAtmosfera() {
     this.escena.background = new THREE.Color(Torre.ZONAS[0].cielo);
     this.escena.fog = new THREE.Fog(Torre.ZONAS[0].niebla,55,145);
-    const materialNube = new THREE.MeshLambertMaterial({color:0xc3d1d5,transparent:true,opacity:.18,depthWrite:false});
-    for (let i = 0; i < 22; i++) {
-      const grupo = new THREE.Group();
-      grupo.name = 'nube-' + i;
-      const a = i * 2.39;
-      const radio = 22 + i%4*8;
-      grupo.position.set(Math.cos(a)*radio,15+i%7*8,Math.sin(a)*radio);
-      for (let j = 0; j < 3; j++) {
-        const nube = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4+j*.3,1),materialNube);
-        nube.position.set(j*2,Math.sin(j+i)*.4,0);
-        nube.scale.set(1.8,.55,1);
-        grupo.add(nube);
-      }
-      this.grupo.add(grupo);
-      this.nubes.push({grupo,x:grupo.position.x,z:grupo.position.z});
-    }
     // Semilla fija: la decoración y las pruebas son reproducibles.
     let semilla = 42;
     const azar = () => { semilla = (semilla * 1664525 + 1013904223) >>> 0; return semilla / 4294967296; };
@@ -332,8 +329,7 @@ Torre.Mundo = class {
       }
     });
     this.gemaCima.rotation.y = tiempo*.5;
-    this.gemaCima.position.y = 75.8 + Math.sin(tiempo*1.4)*.22;
-    this.nubes.forEach((n,i) => { n.grupo.position.x = n.x+Math.sin(tiempo*.05+i)*2; });
+    this.gemaCima.position.y = 1.35 + Math.sin(tiempo*1.4)*.22;
     this.particulas.rotation.y = tiempo*.006;
   }
   reiniciar() {

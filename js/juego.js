@@ -32,7 +32,7 @@ Torre.Juego = class {
     this.inspeccionAnterior = null;
     this.opciones = {sombras:true,alambrico:false,ejes:false,colisiones:false,camaraAutomatica:true,distancia:12,intensidad:1};
     this.dom = {};
-    ['inicio','hud','jugar','pausa','ayuda','victoria','aviso','altura','checkpoint-texto','inspeccion-aviso','cambiar-camara'].forEach(id => { this.dom[id] = document.getElementById(id); });
+    ['inicio','hud','jugar','pausa','ayuda','victoria','aviso','altura','altura-meta','checkpoint-texto','inspeccion-aviso','cambiar-camara'].forEach(id => { this.dom[id] = document.getElementById(id); });
     this.iniciar();
   }
   iniciar() {
@@ -286,7 +286,8 @@ Torre.Juego = class {
   orientarPrimeraPersona() {
     // Al cambiar o reaparecer, se mira hacia el siguiente salto de la ruta.
     const indice = this.fisica.apoyo?.indice ?? this.ultimaPlataforma;
-    const siguiente = this.mundo.plataformas[Math.min(indice+1,Torre.CONFIG.plataformas)].grupo.position;
+    const siguiente = indice >= Torre.CONFIG.plataformas ? this.mundo.cima.grupo.position :
+      this.mundo.plataformas[indice+1].grupo.position;
     const dx = siguiente.x-this.fisica.posicion.x;
     const dz = siguiente.z-this.fisica.posicion.z;
     this.yawPrimera = Math.hypot(dx,dz) > .01 ? Math.atan2(-dx,-dz) : this.yaw;
@@ -322,25 +323,30 @@ Torre.Juego = class {
   }
   aterrizar(plataforma,impacto) {
     this.personaje.aterrizar(impacto);
+    if (plataforma.esCima) {
+      this.ganar();
+      return;
+    }
     this.ultimaPlataforma = plataforma.indice;
     this.maxPlataforma = Math.max(this.maxPlataforma,plataforma.indice);
     this.mundo.marcarPlataforma(plataforma.indice);
     if (plataforma.checkpoint && plataforma.indice > this.checkpoint) {
       this.checkpoint = plataforma.indice;
-      this.avisar(plataforma.indice === 36 ? '¡Cima alcanzada!' : 'Punto de control guardado');
+      this.avisar(plataforma.indice === Torre.CONFIG.plataformas
+        ? 'Último punto de control. Salta hacia la cima de la torre.'
+        : 'Punto de control guardado');
     }
-    if (plataforma.indice === Torre.CONFIG.plataformas) this.ganar();
   }
   ganar() {
     this.estado = 'victoria';
     this.teclas.clear();
-    this.maxAltura = 72;
+    this.maxAltura = this.mundo.cima.altura;
     let record = this.tiempo;
     // El juego también funciona si el navegador bloquea localStorage.
     try {
-      const anterior = Number(localStorage.getItem('torre-ascendente-record'));
+      const anterior = Number(localStorage.getItem('torre-ascendente-record-cima'));
       record = anterior > 0 ? Math.min(anterior,this.tiempo) : this.tiempo;
-      localStorage.setItem('torre-ascendente-record',String(record));
+      localStorage.setItem('torre-ascendente-record-cima',String(record));
     } catch (_) { /* El récord se conserva solo durante esta victoria. */ }
     document.getElementById('tiempo-final').textContent = Torre.formatoTiempo(this.tiempo);
     document.getElementById('caidas-final').textContent = this.caidas;
@@ -413,9 +419,11 @@ Torre.Juego = class {
   }
   actualizarHud() {
     const c = Torre.CONFIG;
-    const altura = THREE.MathUtils.clamp(this.fisica.posicion.y,0,72);
-    this.dom.altura.textContent = Math.floor(altura);
-    this.dom['checkpoint-texto'].textContent = 'Control: '+(this.checkpoint === 0 ? 'Base' : this.checkpoint === 36 ? 'Cima' : this.checkpoint*c.escalon+' m');
+    const altura = THREE.MathUtils.clamp(this.fisica.posicion.y,0,this.mundo.cima.altura);
+    // Los vértices de las mallas pueden situar un suelo unas milésimas más abajo.
+    this.dom.altura.textContent = Math.floor(altura+.001);
+    this.dom['altura-meta'].textContent = this.mundo.cima.altura;
+    this.dom['checkpoint-texto'].textContent = 'Control: '+(this.checkpoint === 0 ? 'Base' : this.checkpoint*c.escalon+' m');
   }
   redimensionar() {
     this.renderer.setSize(window.innerWidth,window.innerHeight);
@@ -436,8 +444,8 @@ Torre.Juego = class {
         this.acumulador -= Torre.CONFIG.pasoFijo;
         if (eventos.salto) this.personaje.saltar();
         if (eventos.aterrizaje) this.aterrizar(eventos.aterrizaje,eventos.impacto);
-        this.maxAltura = Math.max(this.maxAltura,THREE.MathUtils.clamp(this.fisica.posicion.y,0,72));
-        const limiteCaida = Math.max(-2,this.checkpoint*2-11);
+        this.maxAltura = Math.max(this.maxAltura,THREE.MathUtils.clamp(this.fisica.posicion.y,0,this.mundo.cima.altura));
+        const limiteCaida = Math.max(-2,this.checkpoint*Torre.CONFIG.escalon-11);
         if (this.fisica.posicion.y < limiteCaida || Math.hypot(this.fisica.posicion.x,this.fisica.posicion.z) > 24) this.reaparecer(true);
       }
       this.ajustarCamara(false,delta);
