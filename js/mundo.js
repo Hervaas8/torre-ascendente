@@ -1,5 +1,5 @@
 /* Escena y materiales: s2-grafo.js, practica5.js y P5_LucesMateriales.
- * Todo el escenario se genera con geometrías de Three.js y las texturas del curso. */
+ * Geometrías de Three.js, texturas seamless de Poly Haven y cielos CC0 de Kenney. */
 'use strict';
 Torre.Mundo = class {
   constructor(escena, renderer, gestor) {
@@ -14,14 +14,22 @@ Torre.Mundo = class {
     escena.add(this.grupo);
     this.texturas = {};
     const cargador = new THREE.TextureLoader(gestor);
-    ['grass.png','wood512.jpg','metal_128.jpg','pisometalico_1024.jpg'].forEach(nombre => {
+    ['hierba_seamless.jpg','madera_seamless.jpg','metal_seamless.jpg','metal_placas_seamless.jpg'].forEach(nombre => {
       const textura = cargador.load('assets/texturas/' + nombre);
       textura.encoding = THREE.sRGBEncoding;
       textura.wrapS = textura.wrapT = THREE.RepeatWrapping;
-      textura.repeat.set(2,2);
-      if (nombre === 'grass.png') textura.repeat.set(10,10);
+      // Una imagen por plataforma; la hierba cubre una superficie mucho mayor.
+      textura.repeat.set(1,1);
+      if (nombre === 'hierba_seamless.jpg') textura.repeat.set(4,4);
       textura.anisotropy = Math.min(8,renderer.capabilities.getMaxAnisotropy());
       this.texturas[nombre] = textura;
+    });
+    // Un panorama de 360° por tramo. Three.js lo proyecta como mapa de entorno.
+    this.cielos = Torre.ZONAS.map(zona => {
+      const textura = cargador.load('assets/cielos/' + zona.skybox);
+      textura.encoding = THREE.sRGBEncoding;
+      textura.mapping = THREE.EquirectangularReflectionMapping;
+      return textura;
     });
     this.crearLuces();
     this.crearIsla();
@@ -53,6 +61,13 @@ Torre.Mundo = class {
     this.materiales.push(material);
     return material;
   }
+  texturaRepetida(nombre,u,v) {
+    // Comparte la imagen, pero permite otra escala UV sin alterar las plataformas.
+    const textura = this.texturas[nombre].clone();
+    textura.repeat.set(u,v);
+    textura.needsUpdate = true;
+    return textura;
+  }
   malla(geometria,material,posicion,padre = this.grupo) {
     const m = new THREE.Mesh(geometria,material);
     m.position.set(...posicion);
@@ -83,7 +98,7 @@ Torre.Mundo = class {
     isla.name = 'isla-de-partida';
     this.grupo.add(isla);
     const roca = this.material('MeshLambertMaterial',{color:0x697a70});
-    const hierba = this.material('MeshLambertMaterial',{color:0x718f79,map:this.texturas['grass.png']});
+    const hierba = this.material('MeshLambertMaterial',{color:0x718f79,map:this.texturas['hierba_seamless.jpg']});
     this.malla(new THREE.CylinderGeometry(14,10,5,12),roca,[0,-3.2,0],isla);
     this.malla(new THREE.ConeGeometry(10,11,12),roca,[0,-10.9,0],isla).rotation.z = Math.PI;
     this.sueloIsla = this.malla(new THREE.CylinderGeometry(14,14,.7,12),hierba,[0,-.45,0],isla);
@@ -118,14 +133,16 @@ Torre.Mundo = class {
     const torre = new THREE.Group();
     torre.name = 'torre';
     this.grupo.add(torre);
-    const borde = this.material('MeshPhongMaterial',{color:0x9bafaa,map:this.texturas['metal_128.jpg'],shininess:45});
+    const borde = this.material('MeshPhongMaterial',{color:0x9bafaa,map:this.texturas['metal_seamless.jpg'],shininess:45});
     let materialSuperior;
     for (let zona = 0; zona < 3; zona++) {
       const datos = Torre.ZONAS[zona];
       const segmento = new THREE.Group();
       segmento.name = 'tramo-' + datos.corto;
       torre.add(segmento);
-      const material = this.material(zona === 2 ? 'MeshPhongMaterial' : 'MeshLambertMaterial',{color:datos.torre,map:this.texturas[datos.textura]});
+      // Cuatro repeticiones alrededor y cinco en altura evitan estirar la imagen.
+      const mapaTorre = this.texturaRepetida(datos.textura,4,5);
+      const material = this.material(zona === 2 ? 'MeshPhongMaterial' : 'MeshLambertMaterial',{color:datos.torre,map:mapaTorre});
       if (zona === 2) materialSuperior = material;
       this.malla(new THREE.CylinderGeometry(3.05,3.05,24,12),material,[0,zona*24+11.7,0],segmento);
       for (let j = 0; j < 6; j++) {
@@ -285,7 +302,7 @@ Torre.Mundo = class {
     p0.profundidad = 6;
   }
   crearAtmosfera() {
-    this.escena.background = new THREE.Color(Torre.ZONAS[0].cielo);
+    this.escena.background = this.cielos[0];
     this.escena.fog = new THREE.Fog(Torre.ZONAS[0].niebla,55,145);
     // Semilla fija: la decoración y las pruebas son reproducibles.
     let semilla = 42;
@@ -296,18 +313,21 @@ Torre.Mundo = class {
     geo.setAttribute('position',new THREE.Float32BufferAttribute(puntos,3));
     this.particulas = new THREE.Points(geo,new THREE.PointsMaterial({color:0xd6f5d9,size:.09,transparent:true,opacity:.55,depthWrite:false}));
     this.grupo.add(this.particulas);
-    this.colores = {cielo:new THREE.Color(),niebla:new THREE.Color(),luz:new THREE.Color(),ambiente:new THREE.Color(),acento:new THREE.Color()};
+    this.colores = {niebla:new THREE.Color(),luz:new THREE.Color(),ambiente:new THREE.Color(),acento:new THREE.Color()};
   }
   actualizar(delta,tiempo,posicion,enPartida,iluminacion = 1) {
-    const tramo = THREE.MathUtils.clamp(posicion.y/24,0,2);
-    const a = Torre.ZONAS[Math.floor(tramo)];
-    const b = Torre.ZONAS[Math.min(2,Math.floor(tramo)+1)];
+    // La tolerancia evita volver al cielo anterior por redondeos al pisar 24/48 m.
+    const tramo = THREE.MathUtils.clamp((posicion.y+.001)/24,0,2);
+    const zona = Math.floor(tramo);
+    const a = Torre.ZONAS[zona];
+    const b = Torre.ZONAS[Math.min(2,zona+1)];
     const mezcla = THREE.MathUtils.smoothstep(tramo%1,0,1);
     const suavidad = 1 - Math.exp(-delta*2);
-    ['cielo','niebla','luz','ambiente','acento'].forEach(nombre => {
+    ['niebla','luz','ambiente','acento'].forEach(nombre => {
       this.colores[nombre].set(a[nombre]).lerp(new THREE.Color(b[nombre]),mezcla);
     });
-    this.escena.background.lerp(this.colores.cielo,suavidad);
+    // El fondo cambia al entrar en un tramo; luces y niebla se interpolan.
+    this.escena.background = this.cielos[zona];
     this.escena.fog.color.lerp(this.colores.niebla,suavidad);
     this.sol.color.lerp(this.colores.luz,suavidad);
     this.sol.intensity = THREE.MathUtils.lerp(a.intensidad,b.intensidad,mezcla)*iluminacion;

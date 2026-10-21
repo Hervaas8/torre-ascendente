@@ -38,9 +38,9 @@ Torre.dimensionesPlataforma = function(indice) {
   return {ancho,profundidad};
 };
 Torre.ZONAS = [
-  { nombre: 'EL BOSQUE', corto: 'El bosque', cielo: 0x203b47, niebla: 0x37535b, luz: 0xffedc5, ambiente: 0xa4c7c7, acento: 0xb2edca, plataforma: 0xb7b198, torre: 0x839383, textura: 'wood512.jpg', intensidad: .9 },
-  { nombre: 'LAS NUBES', corto: 'Las nubes', cielo: 0x334961, niebla: 0x68798d, luz: 0xc9e5ff, ambiente: 0xa5b9e5, acento: 0xa9d8ff, plataforma: 0xb5bdc9, torre: 0x8495a5, textura: 'metal_128.jpg', intensidad: 1.1 },
-  { nombre: 'EL AMANECER', corto: 'El amanecer', cielo: 0x746372, niebla: 0xb29c98, luz: 0xffd49b, ambiente: 0xe0b6c7, acento: 0xffd897, plataforma: 0xc2b39c, torre: 0x9f938e, textura: 'pisometalico_1024.jpg', intensidad: 1.3 }
+  { nombre: 'EL BOSQUE', corto: 'El bosque', skybox: 'skybox-night.png', niebla: 0x37535b, luz: 0xffedc5, ambiente: 0xa4c7c7, acento: 0xb2edca, plataforma: 0xb7b198, torre: 0x839383, textura: 'madera_seamless.jpg', intensidad: .9 },
+  { nombre: 'LAS NUBES', corto: 'Las nubes', skybox: 'skybox-day.png', niebla: 0x68798d, luz: 0xc9e5ff, ambiente: 0xa5b9e5, acento: 0xa9d8ff, plataforma: 0xb5bdc9, torre: 0x8495a5, textura: 'metal_seamless.jpg', intensidad: 1.1 },
+  { nombre: 'EL AMANECER', corto: 'El amanecer', skybox: 'skybox-morning.png', niebla: 0xb29c98, luz: 0xffd49b, ambiente: 0xe0b6c7, acento: 0xffd897, plataforma: 0xc2b39c, torre: 0x9f938e, textura: 'metal_placas_seamless.jpg', intensidad: 1.3 }
 ];
 Torre.formatoTiempo = function(segundos) {
   const total = Math.floor(segundos);
